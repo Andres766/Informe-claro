@@ -1,0 +1,11 @@
+{
+  "name": "InformeClaro",
+  "short_name": "InformeClaro",
+  "description": "Entiende tus resultados de laboratorio en lenguaje sencillo.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6faf9",
+  "theme_color": "#0f766e",
+  "lang": "es",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
