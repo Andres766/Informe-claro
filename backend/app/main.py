@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from . import models
 from .config import settings
-from .database import Base, SessionLocal, engine, get_db
+from .database import Base, SessionLocal, engine, get_db, migrar_columnas_nuevas
 from .schemas import InformeDetalleOut, InformeResumenOut
 from .services.pdf_parser import PDFInvalidoError, anonimizar, extraer_texto
 from .services.prompt_orchestrator import AVISO_MEDICO, interpretar
@@ -34,6 +34,7 @@ def _crear_usuario_demo():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(engine)
+    migrar_columnas_nuevas()
     _crear_usuario_demo()
     yield
 

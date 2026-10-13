@@ -19,3 +19,16 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def migrar_columnas_nuevas():
+    """Añade columnas que se agregaron al modelo después de crear las tablas.
+
+    create_all() no modifica tablas existentes (p. ej. la BD ya desplegada en Render).
+    """
+    from sqlalchemy import inspect, text
+
+    columnas = {c["name"] for c in inspect(engine).get_columns("usuario")}
+    if "password_hash" not in columnas:
+        with engine.begin() as conn:
+            conn.execute(text("ALTER TABLE usuario ADD COLUMN password_hash VARCHAR(100)"))

@@ -20,6 +20,8 @@ class Usuario(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     nombre: Mapped[str] = mapped_column(String(120))
     email: Mapped[str] = mapped_column(String(160), unique=True)
+    # Nunca se guarda la contraseña: solo su hash bcrypt.
+    password_hash: Mapped[str | None] = mapped_column(String(100), nullable=True)
 
     informes: Mapped[list["InformeCargado"]] = relationship(
         back_populates="usuario", cascade="all, delete-orphan"

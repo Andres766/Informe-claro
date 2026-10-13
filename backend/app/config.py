@@ -1,4 +1,6 @@
 """Configuración central leída desde variables de entorno / archivo .env."""
+import logging
+import secrets
 from typing import Annotated
 
 from pydantic import field_validator
@@ -19,6 +21,11 @@ class Settings(BaseSettings):
     cors_origins: Annotated[list[str], NoDecode] = ["http://localhost:5173"]
     max_pdf_mb: int = 10
 
+    # Clave para firmar los tokens JWT. En producción DEBE definirse (JWT_SECRET en Render);
+    # si falta se genera una aleatoria y las sesiones se pierden al reiniciar el servidor.
+    jwt_secret: str = ""
+    jwt_horas: int = 8
+
     @field_validator("database_url")
     @classmethod
     def usar_driver_psycopg(cls, url: str) -> str:
@@ -38,3 +45,6 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+if not settings.jwt_secret:
+    logging.getLogger(__name__).warning("JWT_SECRET no definido: se usa una clave temporal")
+    settings.jwt_secret = secrets.token_urlsafe(32)
