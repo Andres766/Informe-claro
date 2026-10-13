@@ -19,6 +19,10 @@ PDF_EJEMPLO = Path(__file__).resolve().parent.parent / "samples" / "informe_ejem
 @pytest.fixture(scope="module")
 def client():
     with TestClient(app) as c:
+        r = c.post("/api/auth/registro", json={
+            "nombre": "Paciente Prueba", "email": "prueba@informeclaro.co", "password": "clave-segura-1",
+        })
+        c.headers["Authorization"] = f"Bearer {r.json()['access_token']}"
         yield c
     engine.dispose()
     Path("test_informeclaro.db").unlink(missing_ok=True)

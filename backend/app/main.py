@@ -13,44 +13,31 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
 from . import models
+from .auth import router as auth_router
+from .auth import usuario_actual
 from .config import settings
-from .database import Base, SessionLocal, engine, get_db, migrar_columnas_nuevas
+from .database import Base, engine, get_db, migrar_columnas_nuevas
 from .schemas import InformeDetalleOut, InformeResumenOut
 from .services.pdf_parser import PDFInvalidoError, anonimizar, extraer_texto
 from .services.prompt_orchestrator import AVISO_MEDICO, interpretar
 
 logging.basicConfig(level=logging.INFO)
 
-EMAIL_DEMO = "paciente.demo@informeclaro.co"
-
-
-def _crear_usuario_demo():
-    with SessionLocal() as db:
-        if not db.scalar(select(models.Usuario).where(models.Usuario.email == EMAIL_DEMO)):
-            db.add(models.Usuario(nombre="Paciente Demo", email=EMAIL_DEMO))
-            db.commit()
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(engine)
     migrar_columnas_nuevas()
-    _crear_usuario_demo()
     yield
 
 
-app = FastAPI(title="InformeClaro API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="InformeClaro API", version="0.2.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-def usuario_actual(db: Session = Depends(get_db)) -> models.Usuario:
-    # TODO (siguiente entrega): autenticación con JWT. Por ahora todo se asocia al usuario demo.
-    return db.scalar(select(models.Usuario).where(models.Usuario.email == EMAIL_DEMO))
+app.include_router(auth_router)
 
 
 def _detalle(informe: models.InformeCargado) -> InformeDetalleOut:

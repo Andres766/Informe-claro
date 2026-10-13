@@ -9,14 +9,19 @@ from .config import settings
 ALGORITMO = "HS256"
 
 
+def _bytes(password: str) -> bytes:
+    # bcrypt solo admite 72 bytes (y bcrypt>=5 lanza error si se superan).
+    return password.encode()[:72]
+
+
 def hashear_password(password: str) -> str:
-    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+    return bcrypt.hashpw(_bytes(password), bcrypt.gensalt()).decode()
 
 
 def verificar_password(password: str, password_hash: str | None) -> bool:
     if not password_hash:
         return False
-    return bcrypt.checkpw(password.encode(), password_hash.encode())
+    return bcrypt.checkpw(_bytes(password), password_hash.encode())
 
 
 def crear_token(usuario_id: int) -> str:
