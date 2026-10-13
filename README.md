@@ -32,7 +32,8 @@ npm run dev
   (regex) y genera explicaciones con plantillas. Con la key usa Claude.
 - PDF de prueba con datos ficticios: `backend/samples/informe_ejemplo.pdf`
   (se regenera con `python scripts/generar_pdf_ejemplo.py`).
-- Pruebas del backend: `cd backend && pytest` (15 pruebas).
+- Pruebas del backend: `cd backend && pytest` (20 pruebas).
+- Para usar la app hay que **crear una cuenta** (registro con nombre, correo y contraseña).
 
 ---
 
@@ -48,6 +49,7 @@ React SPA (PWA) ──► FastAPI (orquestador) ──► Servicio de parsing PD
 |---|---|
 | Presentación | `frontend/src/` — `SubirInforme`, `ResultadoInforme`, `Historial`; `public/sw.js` (Service Worker) |
 | Aplicación / API | `backend/app/main.py` — `POST/GET/DELETE /api/informes`, `GET /api/salud` |
+| Autenticación | `backend/app/auth.py`, `backend/app/security.py` — registro, login, JWT, bcrypt |
 | Servicio de parsing | `backend/app/services/pdf_parser.py` — extracción, anonimización, clasificación por rango |
 | Orquestador de prompt | `backend/app/services/prompt_orchestrator.py` — prompt con guardrails, llamada al LLM, filtro de salida |
 | Datos | `backend/app/models.py` — `Usuario`, `InformeCargado`, `ValorExamen`, `PreguntaSugerida` |
@@ -73,6 +75,13 @@ React SPA (PWA) ──► FastAPI (orquestador) ──► Servicio de parsing PD
 
 ---
 
+## Despliegue
+
+- Frontend: Vercel — https://informe-claro.vercel.app (variable `VITE_API_URL`).
+- Backend: Render — https://informe-claro.onrender.com (variables `DATABASE_URL`, `CORS_ORIGINS`,
+  `JWT_SECRET`, `ANTHROPIC_API_KEY`).
+- Base de datos: PostgreSQL gestionado en Render.
+
 ## Estado del avance
 
 **Hecho**
@@ -84,11 +93,14 @@ React SPA (PWA) ──► FastAPI (orquestador) ──► Servicio de parsing PD
 - [x] Frontend React: carga con arrastrar y soltar, resultados con barra de rango, filtro de
       valores fuera de rango, preguntas copiables, historial con eliminación.
 - [x] PWA básica: manifest + Service Worker (la carcasa abre sin conexión; los datos de salud no se cachean).
-- [x] 15 pruebas automáticas (clasificación, anonimización, guardrails, flujo completo de la API).
+- [x] Inicio de sesión: registro y login con contraseñas en hash bcrypt y tokens JWT; cada usuario
+      solo ve y elimina su propio historial.
+- [x] 20 pruebas automáticas (clasificación, anonimización, guardrails, flujo completo de la API,
+      autenticación y aislamiento entre usuarios).
 
 **Pendiente (siguientes entregas)**
-- [ ] Autenticación con JWT (hoy todo se asocia a un usuario demo) y acceso restringido al propio historial.
 - [ ] Probar el prompt con informes reales de distintos laboratorios y ajustar los guardrails.
 - [ ] Soporte a PDF escaneados (OCR).
 - [ ] Cifrado en reposo de las explicaciones en la base de datos.
-- [ ] Despliegue: frontend en Vercel, backend en Render, base de datos en Neon/Supabase.
+- [ ] Recuperación de contraseña por correo.
+- [ ] Migrar la base de datos gratuita de Render (caduca a los 30 días) a Neon/Supabase.

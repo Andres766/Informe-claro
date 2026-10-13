@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 
 from app.database import engine
 from app.main import app
-from app.services.pdf_parser import anonimizar, clasificar
+from app.services.pdf_parser import anonimizar, clasificar, extraer_valores_por_reglas
 from app.services.prompt_orchestrator import aplicar_guardrails
 
 PDF_EJEMPLO = Path(__file__).resolve().parent.parent / "samples" / "informe_ejemplo.pdf"
@@ -45,6 +45,11 @@ def test_anonimizar_oculta_datos_personales():
     texto = anonimizar("Paciente: Juan Pérez\nCorreo juan@mail.com\nGlucosa 90 mg/dL 70 - 100\nID 1085123456")
     assert "Juan" not in texto and "juan@mail.com" not in texto and "1085123456" not in texto
     assert "Glucosa 90 mg/dL 70 - 100" in texto
+
+
+def test_extrae_nombres_con_numeros_y_coma_decimal():
+    valores = extraer_valores_por_reglas("Vitamina B12 420 pg/mL 200 - 900\nCreatinina 1,3 mg/dL 0,7 - 1,2")
+    assert [(v.nombre_valor, v.valor) for v in valores] == [("Vitamina B12", "420"), ("Creatinina", "1,3")]
 
 
 @pytest.mark.parametrize("texto", [
@@ -84,3 +89,45 @@ def test_flujo_completo(client):
 def test_rechaza_archivos_que_no_son_pdf(client):
     r = client.post("/api/informes", files={"archivo": ("notas.txt", b"hola", "text/plain")})
     assert r.status_code == 415
+
+
+# --- Autenticación ---------------------------------------------------------
+
+def _registrar(client, email, password="clave-segura-1"):
+    r = client.post("/api/auth/registro", json={"nombre": "Otra Persona", "email": email, "password": password},
+                    headers={"Authorization": ""})
+    assert r.status_code == 201, r.text
+    return {"Authorization": f"Bearer {r.json()['access_token']}"}
+
+
+def test_sin_sesion_no_hay_acceso(client):
+    sin_token = {"Authorization": ""}
+    assert client.get("/api/informes", headers=sin_token).status_code == 401
+    assert client.get("/api/informes", headers={"Authorization": "Bearer token-falso"}).status_code == 401
+
+
+def test_registro_rechaza_correo_repetido_y_datos_invalidos(client):
+    datos = {"nombre": "Paciente Prueba", "email": "PRUEBA@informeclaro.co", "password": "clave-segura-1"}
+    assert client.post("/api/auth/registro", json=datos).status_code == 409
+    assert client.post("/api/auth/registro", json={**datos, "email": "no-es-correo"}).status_code == 422
+    assert client.post("/api/auth/registro", json={**datos, "email": "x@y.co", "password": "corta"}).status_code == 422
+
+
+def test_login(client):
+    ok = client.post("/api/auth/login", json={"email": "prueba@informeclaro.co", "password": "clave-segura-1"})
+    assert ok.status_code == 200 and ok.json()["usuario"]["nombre"] == "Paciente Prueba"
+    mal = client.post("/api/auth/login", json={"email": "prueba@informeclaro.co", "password": "equivocada"})
+    no_existe = client.post("/api/auth/login", json={"email": "nadie@informeclaro.co", "password": "equivocada"})
+    assert mal.status_code == no_existe.status_code == 401
+    assert mal.json()["detail"] == no_existe.json()["detail"]
+
+
+def test_un_usuario_no_ve_ni_borra_informes_de_otro(client):
+    with PDF_EJEMPLO.open("rb") as f:
+        propio = client.post("/api/informes", files={"archivo": ("mio.pdf", f, "application/pdf")}).json()
+
+    intruso = _registrar(client, "intruso@informeclaro.co")
+    assert client.get("/api/informes", headers=intruso).json() == []
+    assert client.get(f"/api/informes/{propio['id']}", headers=intruso).status_code == 404
+    assert client.delete(f"/api/informes/{propio['id']}", headers=intruso).status_code == 404
+    assert client.get(f"/api/informes/{propio['id']}").status_code == 200

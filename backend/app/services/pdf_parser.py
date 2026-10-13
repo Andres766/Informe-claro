@@ -49,7 +49,7 @@ def anonimizar(texto: str) -> str:
 
 _NUM = r"\d+(?:[.,]\d+)?"
 _LINEA_VALOR = re.compile(
-    rf"^(?P<nombre>[A-Za-zÁÉÍÓÚÜáéíóúüñÑ][A-Za-zÁÉÍÓÚÜáéíóúüñÑ().,%/ -]*?)\s+"
+    rf"^(?P<nombre>[A-Za-zÁÉÍÓÚÜáéíóúüñÑ][A-Za-zÁÉÍÓÚÜáéíóúüñÑ0-9().,%/ -]*?)\s+"
     rf"(?P<valor>{_NUM})\s+"
     rf"(?P<unidad>\S+)\s+"
     rf"(?P<rango>(?:[<>≤≥]=?\s*{_NUM})|(?:{_NUM}\s*[-–]\s*{_NUM}))\s*$"
